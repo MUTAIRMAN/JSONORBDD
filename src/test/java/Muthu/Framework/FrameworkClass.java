@@ -17,9 +17,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
@@ -40,8 +43,16 @@ import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.io.FileHandler;
+import org.openqa.selenium.remote.Command;
+import org.openqa.selenium.remote.CommandExecutor;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.DriverCommand;
+import org.openqa.selenium.remote.HttpCommandExecutor;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.remote.Response;
+import org.openqa.selenium.remote.SessionId;
+import org.openqa.selenium.remote.http.W3CHttpCommandCodec;
+import org.openqa.selenium.remote.http.W3CHttpResponseCodec;
 import org.testng.annotations.DataProvider;
 
 import com.google.gson.JsonElement;
@@ -49,6 +60,51 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 public class FrameworkClass extends initialVariables {
+	/**
+	 * @author Muthukumar
+	 * Description: this would helps to work with already opened browser (takes the session and URL as input)
+	 * 
+		   RemoteWebDriver driver2 = createDriverFromSession(new SessionId("a0e778ffb27bce343ac183205edd8a67"), new URL("http://localhost:10638"));
+		   driver2.get("http://google.com");
+	 */
+		
+		public static RemoteWebDriver createDriverFromSession(final SessionId sessionId, URL command_executor){
+		    CommandExecutor executor = new HttpCommandExecutor(command_executor) {
+
+		    @Override
+		    public Response execute(Command command) throws IOException {
+		        Response response = null;
+		        if (command.getName() == "newSession") {
+		            response = new Response();
+		            response.setSessionId(sessionId.toString());
+		            response.setStatus(0);
+		            response.setValue(Collections.<String, String>emptyMap());
+
+		            try {
+		                Field commandCodec = null;
+		                commandCodec = this.getClass().getSuperclass().getDeclaredField("commandCodec");
+		                commandCodec.setAccessible(true);
+		                commandCodec.set(this, new W3CHttpCommandCodec());
+
+		                Field responseCodec = null;
+		                responseCodec = this.getClass().getSuperclass().getDeclaredField("responseCodec");
+		                responseCodec.setAccessible(true);
+		                responseCodec.set(this, new W3CHttpResponseCodec());
+		            } catch (NoSuchFieldException e) {
+		                e.printStackTrace();
+		            } catch (IllegalAccessException e) {
+		                e.printStackTrace();
+		            }
+
+		        } else {
+		            response = super.execute(command);
+		        }
+		        return response;
+		    }
+		    };
+
+		    return new RemoteWebDriver(executor, new DesiredCapabilities());
+		}
 
 
 	public static void ReportFolderCreator() {
@@ -61,6 +117,17 @@ public class FrameworkClass extends initialVariables {
 		if (!folder.exists())
 			folder.mkdir();
 	}
+	public static void DuplicateReaderPath() throws IOException {
+		reader = new BufferedReader(
+				new FileReader("C:\\Users\\Muthukumar\\eclipse-workspace\\Framework\\FrameWorkProperties.properties"));
+		property = new Properties();
+		property.load(reader);
+		fpath = property.getProperty("ORPath");
+		
+		br = new BufferedReader(new FileReader(fpath));
+
+	}
+
 	
 	public static void ReaderPath() throws IOException {
 		reader = new BufferedReader(
